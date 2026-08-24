@@ -139,10 +139,14 @@ More: [WPILib Git guide](https://docs.wpilib.org/en/stable/docs/software/basic-p
 ## Project structure
 
 ```
+├── .claude/
+│   └── skills/                    Mirror of .github/skills, for Claude Code
 ├── .github/
 │   ├── copilot-instructions.md    Rules for AI coding agents
 │   ├── pull_request_template.md
-│   └── skills/                    Step-by-step workflows for common tasks
+│   └── skills/                    Step-by-step workflows (canonical copy)
+├── scripts/
+│   └── sync-skills.ps1            Mirrors .github/skills -> .claude/skills
 ├── src/main/java/frc/robot/
 │   ├── Main.java                  Entry point — do not modify
 │   ├── Robot.java                 TimedRobot lifecycle

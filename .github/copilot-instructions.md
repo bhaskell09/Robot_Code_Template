@@ -8,6 +8,10 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md) — read it before making structural ch
 This mirrors [CLAUDE.md](../CLAUDE.md). **Keep the two in sync**: a rule added to one belongs in the
 other.
 
+The skills in `.github/skills/` are likewise mirrored to `.claude/skills/`, because Claude Code reads
+only the latter. **`.github/skills/` is canonical** — edit there and run
+`pwsh scripts/sync-skills.ps1`, or the next sync overwrites your change.
+
 ---
 
 ## Project overview
@@ -28,7 +32,7 @@ worked example of each pattern. See [SETUP.md](../SETUP.md) to start a season.
 | **[ARCHITECTURE.md](../ARCHITECTURE.md)** | Before adding a subsystem, command, or anything structural. |
 | **[SETUP.md](../SETUP.md)** | Starting a new season, or upgrading WPILib. |
 | **[README.md](../README.md)** | Onboarding. Install, clone, git workflow. |
-| **[skills/](skills/)** | Step-by-step workflows for the five most common tasks. |
+| **[skills/](skills/)** | Step-by-step workflows for the five most common tasks. Canonical copy — mirrored to `.claude/skills/`. |
 
 ---
 
@@ -124,10 +128,11 @@ belongs one level up.
 |---|---|
 | A new rule, gotcha, or "never do X" | this file's hard rules — and mirror into `CLAUDE.md` |
 | How something is structured, or a reusable pattern | `ARCHITECTURE.md` |
-| A repeatable multi-step task | a skill under `.github/skills/` |
+| A repeatable multi-step task | a skill under `.github/skills/`, then `pwsh scripts/sync-skills.ps1` |
 | A season-start or upgrade step | `SETUP.md` |
 
-Also check: if you changed a file a skill references, update the skill. If you corrected a claim in
-one doc, check whether the same claim appears in another.
+Also check: if you changed a file a skill references, update the skill, and run
+`pwsh scripts/sync-skills.ps1` so `.claude/skills/` matches. If you corrected a claim in one doc,
+check whether the same claim appears in another.
 
 Prefer explaining *why* over adding another all-caps warning.

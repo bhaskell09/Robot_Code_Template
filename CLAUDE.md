@@ -25,11 +25,26 @@ reusable core plus one worked example of each pattern. See [SETUP.md](SETUP.md) 
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | Before adding a subsystem, command, or anything structural. How the codebase is organized and why. |
 | **[SETUP.md](SETUP.md)** | Starting a new season, or upgrading WPILib. |
 | **[README.md](README.md)** | Onboarding a new programmer. Install, clone, git workflow. |
-| **[.github/skills/](.github/skills/)** | Step-by-step workflows for the five most common tasks. |
+| **[.claude/skills/](.claude/skills/)** | Step-by-step workflows for the five most common tasks. Mirrored from `.github/skills/` — see below. |
 | **[Systems_Check.md](Systems_Check.md)** | Pre-match pit checklist. |
 
-`.github/copilot-instructions.md` mirrors this file for GitHub Copilot. **Keep the two in sync** —
-when you change a rule here, change it there.
+### Two mirrors to keep in sync
+
+Copilot and Claude Code each read their own directory and will not look in the other's, so two pairs
+of files are deliberately duplicated:
+
+| Canonical | Mirror | How |
+|---|---|---|
+| `.github/copilot-instructions.md` | `CLAUDE.md` (this file) | By hand — the two are worded differently on purpose |
+| `.github/skills/` | `.claude/skills/` | `pwsh scripts/sync-skills.ps1` |
+
+**Edit skills in `.github/skills/`, then run the sync script.** Editing the `.claude/` copy directly
+means the next sync silently overwrites your change.
+
+```bash
+pwsh scripts/sync-skills.ps1          # copy .github/skills -> .claude/skills
+pwsh scripts/sync-skills.ps1 -Check   # report drift, exit non-zero if any
+```
 
 ---
 
@@ -120,13 +135,14 @@ Where it goes:
 |---|---|
 | A new rule, gotcha, or "never do X" | **CLAUDE.md** hard rules — and mirror it into `.github/copilot-instructions.md` |
 | How a part of the codebase is structured, or a pattern worth reusing | **ARCHITECTURE.md** |
-| A repeatable multi-step task | a skill under `.github/skills/` |
+| A repeatable multi-step task | a skill under `.github/skills/`, then `pwsh scripts/sync-skills.ps1` |
 | A season-start or upgrade step | **SETUP.md** |
 
-Two things to check while you are there:
+Three things to check while you are there:
 
 - **If you changed a file a skill references, update the skill.** A skill pointing at a file that no
   longer exists is worse than no skill.
+- **If you edited any skill, run `pwsh scripts/sync-skills.ps1`** so both copies match.
 - **If you corrected something in one doc, check whether the same claim appears in another.** These
   files overlap by design; they drift by accident.
 

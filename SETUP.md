@@ -136,6 +136,12 @@ Then remove their entries from `Constants`, `RobotMap`, and `RobotContainer`, an
 reference paths in the five skills under `.github/skills/` to point at real files. A skill pointing
 at a file that no longer exists is worse than no skill.
 
+Then mirror the edits so Claude Code sees them too:
+
+```bash
+pwsh scripts/sync-skills.ps1
+```
+
 ---
 
 ## 7. Season housekeeping
