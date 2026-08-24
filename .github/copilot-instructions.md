@@ -38,11 +38,15 @@ worked example of each pattern. See [SETUP.md](../SETUP.md) to start a season.
 
 ## Context7 documentation lookups
 
-Vendor libraries here (Phoenix 6, WPILib, Limelight, PathPlanner) move faster than training data.
-The context7 MCP server is configured project-wide (`.vscode/mcp.json`) — use it over guessing at an
-API from memory. Resolving by name is ambiguous (e.g. "WPILib" alone returns four different
-matches), so these IDs are pre-resolved — call the docs-query tool with them directly, skip the
-resolve step:
+Vendor libraries here (Phoenix 6, WPILib, Limelight, PathPlanner) move faster than training data —
+use context7 over guessing at an API from memory. VS Code doesn't get this via a checked-in
+`mcp.json`: a local npx-run context7 server emits JSON Schema Draft-07 tool definitions that VS
+Code's stricter MCP client rejects outright ("tools have invalid JSON schemas and will be omitted").
+Install the recommended **Context7 MCP Server** extension (`.vscode/extensions.json` — VS Code
+prompts for it on opening this workspace) instead; it talks to Context7's hosted endpoint and
+registers itself, no manual server config needed. Resolving by name is ambiguous (e.g. "WPILib"
+alone returns four different matches), so these IDs are pre-resolved — call the docs-query tool with
+them directly, skip the resolve step:
 
 | Need | context7 ID |
 |---|---|
