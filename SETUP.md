@@ -89,8 +89,9 @@ regenerated. Drivetrain customizations belong in `CommandSwerveDrivetrain.java`.
 `ExamplePositionSubsystem` entries with your mechanisms. Keep the numbering blocks (intake 20-29,
 handling 30-39, scoring 40-49, superstructure 50-59) and leave gaps.
 
-**`constants/Constants.java`** — replace the two example constants objects. Both constructors are
-positional, so count the arguments against the constructor signature.
+**`constants/Constants.java`** — replace the two example constants objects. Both are built with a
+builder (`forMotor(canId)` → `with*` calls → `build()`), so the call order does not matter. If you
+leave out a required group, `build()` throws at robot boot with a message naming the missing call.
 
 **`constants/TunableConstants.java`** — replace the example entries with values you actually expect
 to tune from the dashboard.

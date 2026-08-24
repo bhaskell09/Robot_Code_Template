@@ -403,10 +403,34 @@ Never hardcode a bus name as a string literal at a call site — use `RobotMap.c
 PID gains, current limits, soft limits, tolerances, speeds. Organized as nested static classes, plus
 one `VelocityControlConstants` / `PositionControlConstants` instance per motor subsystem.
 
-Those two constructors are **positional**, so argument order is what binds each number to its field
-— not the comment beside it. Miscount by one and kP silently becomes kD, with no compiler error and
-a mechanism that misbehaves in a way that looks mechanical. Keep the comments aligned and count
-twice. (Watch for integer division too: `5/1` is an int expression that truncates. Write `5.0`.)
+Both are built with a **builder**, not a constructor:
+
+```java
+public static final PositionControlConstants ExamplePositionSubsystemConstants =
+    PositionControlConstants.forMotor(RobotMap.canIDs.ExamplePositionSubsystem.MOTOR)
+        .withInchesPerRotation(0.8)
+        .withGearRatio(5.0)
+        .withMotionMagic(35.0, 70.0)   // cruise rot/s, accel rot/s^2
+        .withPID(35.0, 0.0, 0.0, 0.0)  // kP, kI, kD, kV
+        .withCurrentLimits(40.0, 60.0) // supply amps, stator amps
+        .build();
+```
+
+The reason is that these used to be one eleven-argument constructor, where argument *position* bound
+each number to its field and the comment beside it was decoration. Miscount by one and kP silently
+became kD — no compiler error, and a mechanism that misbehaves in a way that looks mechanical, so
+the first hour goes into checking the gearbox. With a builder the method name does the binding, so
+order cannot matter and a miscount is a compile error.
+
+That trades one failure mode for another: you can no longer mis-order a value, but you *can* forget
+a call, and a forgotten group would default to zeros. So `build()` checks that every required group
+was supplied and throws an `IllegalStateException` naming the missing call. These objects are
+created in a static initializer, so that surfaces as a hard failure at robot boot — loud, immediate,
+and identical every run, which is exactly what a silent zero is not.
+
+`withGearRatio` is the one optional call. It feeds only the angle telemetry readout, so it defaults
+to 1.0 and can be skipped on a linear mechanism. (Write `5.0`, never `5/1` — that is an int
+expression and truncates silently.)
 
 ### `constants/TunableConstants.java` — live dashboard values
 

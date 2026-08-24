@@ -59,46 +59,40 @@ drivetrain lives on the roboRIO bus.
 
 ### 2. Constants into `constants/Constants.java`
 
-**Both constructors are positional.** Argument order is what binds each number to its field — the
-comment beside it is decoration. Miscount by one and kP silently becomes kD, with no compiler error
-and a mechanism that misbehaves in a way that looks mechanical. Count the arguments against the
-constructor signature before moving on.
+**Both are built with a builder, not a constructor.** Start with `forMotor(canId)`, chain the
+`with*` calls, finish with `build()`. The method name binds each value, so call order does not
+matter and a miscount is a compile error rather than a silently swapped gain.
 
-**Velocity — 7 arguments:**
+**Velocity:**
 
 ```java
 public static final VelocityControlConstants MySubsystemConstants =
-    new VelocityControlConstants(
-        RobotMap.canIDs.MySubsystem.MOTOR,
-        0.10,   // kP  — start small, raise until it holds speed without oscillating
-        0.0,    // kI  — leave at 0 unless you have steady-state error
-        0.0,    // kD  — rarely useful on a velocity loop
-        0.12,   // kV  — feedforward; about 0.12 is typical for a Kraken or Falcon
-        40.0,   // kSupplyCurrentLimit (amps)
-        60.0    // kStatorCurrentLimit (amps)
-    );
+    VelocityControlConstants.forMotor(RobotMap.canIDs.MySubsystem.MOTOR)
+        .withPID(0.10, 0.0, 0.0, 0.12)  // kP, kI, kD, kV
+        .withCurrentLimits(40.0, 60.0)  // supply amps, stator amps
+        .build();
 ```
 
-**Position — 11 arguments, in this order:**
+kP starts small and rises until it holds speed without oscillating; kI stays at 0 unless there is
+steady-state error; kD is rarely useful on a velocity loop; kV around 0.12 is typical for a Kraken
+or Falcon.
+
+**Position:**
 
 ```java
 public static final PositionControlConstants MySubsystemConstants =
-    new PositionControlConstants(
-        RobotMap.canIDs.MySubsystem.MOTOR,
-        0.8,    // kInchesPerRotation — measured
-        5.0,    // kGearRatio — write 5.0, not 5/1: integer division truncates silently
-        35.0,   // kCruiseVelocity (rotations/sec)
-        70.0,   // kAcceleration (rotations/sec^2) — commonly about 2x cruise
-        35.0,   // kP
-        0.0,    // kI
-        0.0,    // kD
-        0.0,    // kV
-        40.0,   // kSupplyCurrentLimit (amps)
-        60.0    // kStatorCurrentLimit (amps)
-    );
+    PositionControlConstants.forMotor(RobotMap.canIDs.MySubsystem.MOTOR)
+        .withInchesPerRotation(0.8)     // measure this, do not guess
+        .withGearRatio(5.0)             // telemetry only; omit on a linear mechanism
+        .withMotionMagic(35.0, 70.0)    // cruise rot/s, accel rot/s^2
+        .withPID(35.0, 0.0, 0.0, 0.0)   // kP, kI, kD, kV
+        .withCurrentLimits(40.0, 60.0)  // supply amps, stator amps
+        .build();
 ```
 
-Note Motion Magic cruise/accel come **before** the PID gains, not after.
+`withGearRatio` is the only optional call — it feeds the angle telemetry readout and defaults to
+1.0. Every other group is required, and `build()` throws at robot boot naming any you left out.
+Write ratios as `5.0`, never `5/1`: that is an int expression and truncates silently.
 
 **Position mechanisms also need travel limits.** Keep them beside the constants so the clamp inside
 the subsystem and the setpoints commands ask for cannot drift apart:

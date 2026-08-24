@@ -118,10 +118,33 @@ public final class Constants {
   //
   // One of these gets built per motor subsystem below, then handed to the base
   // class via setDefaultConstants(). The base class applies it to the TalonFX.
+  //
+  // Both are built with a BUILDER rather than a constructor. A constructor taking
+  // eleven doubles binds each value by argument POSITION, so miscounting by one
+  // turns kP into kD with no compiler error -- the mechanism then misbehaves in a
+  // way that looks mechanical, and the first hour goes into checking the gearbox.
+  // With a builder the method name binds the value, so order cannot matter.
+  //
+  // The trade is that you can now forget a call instead of mis-ordering one, so
+  // build() verifies that every group a zero would silently break was supplied.
+  // These objects are created in a static initializer, which means a missing
+  // group is a hard failure at robot boot, with a message naming the missing
+  // call -- loud, immediate, and identical every single run.
   // ===========================================================================
 
-  /** Tuning values for a subsystem extending {@code VelocityControlSystem}. */
-  public static class VelocityControlConstants {
+  /**
+   * Tuning values for a subsystem extending {@code VelocityControlSystem}.
+   *
+   * <p>Build one with {@link #forMotor(int)}:
+   *
+   * <pre>{@code
+   * VelocityControlConstants.forMotor(RobotMap.canIDs.Flywheel.MOTOR)
+   *     .withPID(0.10, 0.0, 0.0, 0.12)
+   *     .withCurrentLimits(40.0, 60.0)
+   *     .build();
+   * }</pre>
+   */
+  public static final class VelocityControlConstants {
     public final int kCanId;
     public final double kP;
     public final double kI;
@@ -130,20 +153,92 @@ public final class Constants {
     public final double kSupplyCurrentLimit;
     public final double kStatorCurrentLimit;
 
-    public VelocityControlConstants(int kCanId, double kP, double kI, double kD, double kV,
-                                    double kSupplyCurrentLimit, double kStatorCurrentLimit) {
-      this.kCanId = kCanId;
-      this.kP = kP;
-      this.kI = kI;
-      this.kD = kD;
-      this.kV = kV;
-      this.kSupplyCurrentLimit = kSupplyCurrentLimit;
-      this.kStatorCurrentLimit = kStatorCurrentLimit;
+    private VelocityControlConstants(Builder b) {
+      this.kCanId = b.canId;
+      this.kP = b.kP;
+      this.kI = b.kI;
+      this.kD = b.kD;
+      this.kV = b.kV;
+      this.kSupplyCurrentLimit = b.supplyCurrentLimit;
+      this.kStatorCurrentLimit = b.statorCurrentLimit;
+    }
+
+    /** Starts a builder for the motor at {@code canId}. Take the ID from {@link RobotMap}. */
+    public static Builder forMotor(int canId) {
+      return new Builder(canId);
+    }
+
+    /** Fluent builder. Each {@code with*} call returns itself; finish with {@code build()}. */
+    public static final class Builder {
+      private final int canId;
+      private double kP;
+      private double kI;
+      private double kD;
+      private double kV;
+      private double supplyCurrentLimit;
+      private double statorCurrentLimit;
+      private boolean pidSet;
+      private boolean currentLimitsSet;
+
+      private Builder(int canId) {
+        this.canId = canId;
+      }
+
+      /**
+       * Closed-loop velocity gains. Required.
+       *
+       * @param kP proportional -- start small, raise until it holds speed without oscillating
+       * @param kI integral -- leave at 0 unless you have steady-state error
+       * @param kD derivative -- rarely useful on a velocity loop
+       * @param kV velocity feedforward -- about 0.12 is typical for a Kraken or Falcon
+       */
+      public Builder withPID(double kP, double kI, double kD, double kV) {
+        this.kP = kP;
+        this.kI = kI;
+        this.kD = kD;
+        this.kV = kV;
+        this.pidSet = true;
+        return this;
+      }
+
+      /**
+       * Current limits in amps. Required.
+       *
+       * @param supplyAmps drawn from the battery
+       * @param statorAmps delivered to the windings -- this is the one that caps torque
+       */
+      public Builder withCurrentLimits(double supplyAmps, double statorAmps) {
+        this.supplyCurrentLimit = supplyAmps;
+        this.statorCurrentLimit = statorAmps;
+        this.currentLimitsSet = true;
+        return this;
+      }
+
+      /** Validates that nothing required was left out, then produces the constants object. */
+      public VelocityControlConstants build() {
+        require(pidSet, canId, "withPID(kP, kI, kD, kV)");
+        require(currentLimitsSet, canId, "withCurrentLimits(supplyAmps, statorAmps)");
+        return new VelocityControlConstants(this);
+      }
     }
   }
 
-  /** Tuning values for a subsystem extending {@code PositionControlSystem}. */
-  public static class PositionControlConstants {
+  /**
+   * Tuning values for a subsystem extending {@code PositionControlSystem}.
+   *
+   * <p>Build one with {@link #forMotor(int)}:
+   *
+   * <pre>{@code
+   * PositionControlConstants.forMotor(RobotMap.canIDs.Elevator.MOTOR)
+   *     .withInchesPerRotation(0.8)
+   *     .withGearRatio(5.0)
+   *     .withMotionMagic(35.0, 70.0)
+   *     .withPID(35.0, 0.0, 0.0, 0.0)
+   *     .withCurrentLimits(40.0, 60.0)
+   *     .build();
+   * }</pre>
+   */
+  public static final class PositionControlConstants {
     public final int kCanId;
     /** Mechanism travel produced by one motor rotation. Inches for linear mechanisms. */
     public final double kInchesPerRotation;
@@ -158,60 +253,171 @@ public final class Constants {
     public final double kSupplyCurrentLimit;
     public final double kStatorCurrentLimit;
 
-    public PositionControlConstants(int kCanId, double kInchesPerRotation, double kGearRatio,
-                                    double kCruiseVelocity, double kAcceleration,
-                                    double kP, double kI, double kD, double kV,
-                                    double kSupplyCurrentLimit, double kStatorCurrentLimit) {
-      this.kCanId = kCanId;
-      this.kInchesPerRotation = kInchesPerRotation;
-      this.kGearRatio = kGearRatio;
-      this.kCruiseVelocity = kCruiseVelocity;
-      this.kAcceleration = kAcceleration;
-      this.kP = kP;
-      this.kI = kI;
-      this.kD = kD;
-      this.kV = kV;
-      this.kSupplyCurrentLimit = kSupplyCurrentLimit;
-      this.kStatorCurrentLimit = kStatorCurrentLimit;
+    private PositionControlConstants(Builder b) {
+      this.kCanId = b.canId;
+      this.kInchesPerRotation = b.inchesPerRotation;
+      this.kGearRatio = b.gearRatio;
+      this.kCruiseVelocity = b.cruiseVelocity;
+      this.kAcceleration = b.acceleration;
+      this.kP = b.kP;
+      this.kI = b.kI;
+      this.kD = b.kD;
+      this.kV = b.kV;
+      this.kSupplyCurrentLimit = b.supplyCurrentLimit;
+      this.kStatorCurrentLimit = b.statorCurrentLimit;
+    }
+
+    /** Starts a builder for the motor at {@code canId}. Take the ID from {@link RobotMap}. */
+    public static Builder forMotor(int canId) {
+      return new Builder(canId);
+    }
+
+    /** Fluent builder. Each {@code with*} call returns itself; finish with {@code build()}. */
+    public static final class Builder {
+      private final int canId;
+      private double inchesPerRotation;
+      private double gearRatio = 1.0;
+      private double cruiseVelocity;
+      private double acceleration;
+      private double kP;
+      private double kI;
+      private double kD;
+      private double kV;
+      private double supplyCurrentLimit;
+      private double statorCurrentLimit;
+      private boolean inchesPerRotationSet;
+      private boolean motionMagicSet;
+      private boolean pidSet;
+      private boolean currentLimitsSet;
+
+      private Builder(int canId) {
+        this.canId = canId;
+      }
+
+      /**
+       * Mechanism travel per motor rotation, in inches. Required -- measure it, do not guess.
+       *
+       * <p>Every inches/rotations conversion in the base class divides by this, so a value of zero
+       * would command a position of infinity. That is why it has no default.
+       */
+      public Builder withInchesPerRotation(double inchesPerRotation) {
+        this.inchesPerRotation = inchesPerRotation;
+        this.inchesPerRotationSet = true;
+        return this;
+      }
+
+      /**
+       * Motor rotations per one mechanism rotation. Optional, defaults to 1.0.
+       *
+       * <p>Used only for the angle telemetry readout, so leaving it out costs you a dashboard
+       * number and nothing else. Set it on rotary mechanisms; skip it on linear ones.
+       *
+       * <p>Write {@code 5.0}, not {@code 5/1} -- integer division truncates silently.
+       */
+      public Builder withGearRatio(double gearRatio) {
+        this.gearRatio = gearRatio;
+        return this;
+      }
+
+      /**
+       * Motion Magic trapezoidal profile limits. Required.
+       *
+       * @param cruiseVelocity rotations per second at the flat top of the profile
+       * @param acceleration rotations per second squared on the ramps; commonly about 2x cruise
+       */
+      public Builder withMotionMagic(double cruiseVelocity, double acceleration) {
+        this.cruiseVelocity = cruiseVelocity;
+        this.acceleration = acceleration;
+        this.motionMagicSet = true;
+        return this;
+      }
+
+      /**
+       * Closed-loop position gains. Required.
+       *
+       * @param kP proportional -- raise until it holds position under load
+       * @param kI integral -- usually 0
+       * @param kD derivative -- add 0.1 to 1.0 if it oscillates around the setpoint
+       * @param kV velocity feedforward
+       */
+      public Builder withPID(double kP, double kI, double kD, double kV) {
+        this.kP = kP;
+        this.kI = kI;
+        this.kD = kD;
+        this.kV = kV;
+        this.pidSet = true;
+        return this;
+      }
+
+      /**
+       * Current limits in amps. Required.
+       *
+       * <p>Keep the stator limit comfortably above any stall threshold used for hard-stop zeroing,
+       * or the limit caps current before the stall detector fires and homing never completes.
+       *
+       * @param supplyAmps drawn from the battery
+       * @param statorAmps delivered to the windings -- this is the one that caps torque
+       */
+      public Builder withCurrentLimits(double supplyAmps, double statorAmps) {
+        this.supplyCurrentLimit = supplyAmps;
+        this.statorCurrentLimit = statorAmps;
+        this.currentLimitsSet = true;
+        return this;
+      }
+
+      /** Validates that nothing required was left out, then produces the constants object. */
+      public PositionControlConstants build() {
+        require(inchesPerRotationSet, canId, "withInchesPerRotation(inches)");
+        require(motionMagicSet, canId, "withMotionMagic(cruiseVelocity, acceleration)");
+        require(pidSet, canId, "withPID(kP, kI, kD, kV)");
+        require(currentLimitsSet, canId, "withCurrentLimits(supplyAmps, statorAmps)");
+        return new PositionControlConstants(this);
+      }
+    }
+  }
+
+  /**
+   * Shared by both builders. Fails the build with a message naming the call that was missed.
+   *
+   * <p>Thrown from a static initializer, so the JVM wraps it in an {@code ExceptionInInitializerError}
+   * at boot. The message still prints, and the failure is the same every run -- which is the point.
+   * Silently defaulting a required gain to zero produces a mechanism that simply does not move, and
+   * that is much harder to trace back to this file.
+   */
+  private static void require(boolean wasSet, int canId, String missingCall) {
+    if (!wasSet) {
+      throw new IllegalStateException(
+          "Motor constants for CAN ID " + canId + " are incomplete: " + missingCall
+              + " was never called before build(). Leaving it out would set those values to zero,"
+              + " which does not fail loudly at runtime.");
     }
   }
 
   // ===========================================================================
   // PER-SUBSYSTEM CONSTANTS  <- this is the section you rewrite every season
   //
-  // The constructors are positional, so the argument ORDER is what binds each
-  // number to its field -- not the comment beside it. Miscount by one and kP
-  // silently becomes kD, with no compiler error and a mechanism that misbehaves
-  // in a way that looks mechanical. Keep the comments aligned and count twice.
+  // Copy one of the blocks below, rename it, point forMotor() at your CAN ID,
+  // and change the numbers. The builder call order does not matter and the
+  // compiler checks each value against the parameter it is named for, so the
+  // only thing to be careful about is the numbers themselves.
   // ===========================================================================
 
   /** Example velocity subsystem. Delete once you have real mechanisms. */
   public static final VelocityControlConstants ExampleVelocitySubsystemConstants =
-      new VelocityControlConstants(
-          RobotMap.canIDs.ExampleVelocitySubsystem.MOTOR,
-          0.10,   // kP  -- start small, raise until it reaches speed without oscillating
-          0.0,    // kI  -- leave at 0 unless you have steady-state error
-          0.0,    // kD  -- rarely useful on a velocity loop
-          0.12,   // kV  -- feedforward; about 0.12 is typical for a Kraken or Falcon
-          40.0,   // kSupplyCurrentLimit (amps)
-          60.0    // kStatorCurrentLimit (amps)
-      );
+      VelocityControlConstants.forMotor(RobotMap.canIDs.ExampleVelocitySubsystem.MOTOR)
+          .withPID(0.10, 0.0, 0.0, 0.12)  // kP, kI, kD, kV
+          .withCurrentLimits(40.0, 60.0)  // supply amps, stator amps
+          .build();
 
   /** Example position subsystem. Delete once you have real mechanisms. */
   public static final PositionControlConstants ExamplePositionSubsystemConstants =
-      new PositionControlConstants(
-          RobotMap.canIDs.ExamplePositionSubsystem.MOTOR,
-          0.8,    // kInchesPerRotation -- measure this, do not guess
-          5.0,    // kGearRatio -- write 5.0, not 5/1: integer division truncates silently
-          35.0,   // kCruiseVelocity (rotations/sec)
-          70.0,   // kAcceleration (rotations/sec^2) -- commonly about 2x cruise
-          35.0,   // kP  -- raise until it holds position under load
-          0.0,    // kI
-          0.0,    // kD  -- add 0.1 to 1.0 if it oscillates around the setpoint
-          0.0,    // kV
-          40.0,   // kSupplyCurrentLimit (amps)
-          60.0    // kStatorCurrentLimit (amps)
-      );
+      PositionControlConstants.forMotor(RobotMap.canIDs.ExamplePositionSubsystem.MOTOR)
+          .withInchesPerRotation(0.8)     // measure this, do not guess
+          .withGearRatio(5.0)             // telemetry only; omit on a linear mechanism
+          .withMotionMagic(35.0, 70.0)    // cruise rot/s, accel rot/s^2
+          .withPID(35.0, 0.0, 0.0, 0.0)   // kP, kI, kD, kV
+          .withCurrentLimits(40.0, 60.0)  // supply amps, stator amps
+          .build();
 
   /**
    * Travel limits and tolerances for the example position subsystem.

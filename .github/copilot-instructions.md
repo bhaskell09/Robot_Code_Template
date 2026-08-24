@@ -137,8 +137,9 @@ in `CommandSwerveDrivetrain`.
 The short version — the `add-motor-subsystem` skill has the full workflow.
 
 1. CAN ID into `RobotMap.canIDs`.
-2. A `VelocityControlConstants` or `PositionControlConstants` into `Constants`. The constructors are
-   positional, so argument order binds each value — count twice.
+2. A `VelocityControlConstants` or `PositionControlConstants` into `Constants`. Both use a builder:
+   `forMotor(canId)`, chain the `with*` calls, `build()`. Order does not matter; omitting a required
+   group throws at boot.
 3. A class extending `VelocityControlSystem` or `PositionControlSystem`. Three lines: `super(...)`,
    `setDefaultConstants(...)`, `setInverted(...)`.
 4. Instantiate in `RobotContainer` and bind it.
