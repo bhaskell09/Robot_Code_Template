@@ -48,6 +48,38 @@ pwsh scripts/sync-skills.ps1 -Check   # report drift, exit non-zero if any
 
 ---
 
+## Context7 documentation lookups
+
+This repo depends on vendor libraries (Phoenix 6, WPILib, Limelight, PathPlanner) that move faster
+than any model's training data. The context7 MCP server is configured project-wide
+(`.mcp.json`) — use it instead of guessing at an API from memory, especially for anything version-
+specific.
+
+Resolving a library by name is ambiguous — searching "WPILib" alone returns four plausible matches
+with meaningfully different content and coverage. These IDs are already resolved so you can call
+`query-docs` directly and skip `resolve-library-id`:
+
+| Need | context7 ID |
+|---|---|
+| Phoenix 6 Java API (method signatures) | `/websites/api_ctr-electronics_phoenix6_stable_java` |
+| Phoenix 6 guide (tuning, swerve setup, CAN bus) | `/websites/v6_ctr-electronics_en_stable` |
+| Phoenix 6 examples (full example projects) | `/crosstheroadelec/phoenix6-examples` |
+| WPILib guide (command-based concepts, units, sim) | `/websites/wpilib_en_stable` |
+| WPILib javadoc (exact class/method signatures) | `/websites/github_wpilib` |
+| Limelight (the library vendored as `LimelightHelpers.java`) | `/limelightvision/limelightlib-wpijava` |
+| PathPlanner (NamedCommands, AutoBuilder, event markers) | `/mjansen4857/pathplanner` |
+
+If a lookup against one of these comes back thin, `/crosstheroadelec/phoenix6-documentation`,
+`/wpilibsuite/wpilib-docs`, `/wpilibsuite/allwpilib`, and `/websites/pathplanner_dev` are the same
+content from a different source (or, for `allwpilib`, the raw source repo instead of the generated
+javadoc) and worth trying as a fallback.
+
+**Do not use `resolve-library-id` for these four libraries** — it returns multiple near-identical
+candidates and picking the wrong one silently pulls stale or off-topic docs. Only fall back to it for
+a library that genuinely isn't in this table.
+
+---
+
 ## IMPORTANT: Bash rules
 
 - **Ask before running any build or deploy command.** This includes `./gradlew build`,

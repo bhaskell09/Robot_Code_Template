@@ -36,6 +36,30 @@ worked example of each pattern. See [SETUP.md](../SETUP.md) to start a season.
 
 ---
 
+## Context7 documentation lookups
+
+Vendor libraries here (Phoenix 6, WPILib, Limelight, PathPlanner) move faster than training data.
+The context7 MCP server is configured project-wide (`.vscode/mcp.json`) — use it over guessing at an
+API from memory. Resolving by name is ambiguous (e.g. "WPILib" alone returns four different
+matches), so these IDs are pre-resolved — call the docs-query tool with them directly, skip the
+resolve step:
+
+| Need | context7 ID |
+|---|---|
+| Phoenix 6 Java API (method signatures) | `/websites/api_ctr-electronics_phoenix6_stable_java` |
+| Phoenix 6 guide (tuning, swerve setup, CAN bus) | `/websites/v6_ctr-electronics_en_stable` |
+| Phoenix 6 examples | `/crosstheroadelec/phoenix6-examples` |
+| WPILib guide (command-based concepts, units, sim) | `/websites/wpilib_en_stable` |
+| WPILib javadoc (exact class/method signatures) | `/websites/github_wpilib` |
+| Limelight (`LimelightHelpers.java` is this library) | `/limelightvision/limelightlib-wpijava` |
+| PathPlanner (NamedCommands, AutoBuilder, markers) | `/mjansen4857/pathplanner` |
+
+Thin results on one of these — try `/crosstheroadelec/phoenix6-documentation`,
+`/wpilibsuite/wpilib-docs`, `/wpilibsuite/allwpilib` (raw source instead of javadoc), or
+`/websites/pathplanner_dev` (same content, different source).
+
+---
+
 ## IMPORTANT: Bash rules
 
 - **Ask before running any build or deploy command** — `./gradlew build`, `./gradlew deploy`,
